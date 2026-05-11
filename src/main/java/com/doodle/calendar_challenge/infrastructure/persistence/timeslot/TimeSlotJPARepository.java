@@ -18,5 +18,15 @@ public interface TimeSlotJPARepository extends JpaRepository<TimeSlotJPAEntity, 
     """)
     boolean existsOverlappingSlot(String owner, Instant startAt, Instant endAt);
 
+    @Query("""
+        SELECT COUNT(ts) > 0
+        FROM TimeSlotJPAEntity ts
+        WHERE ts.owner = :owner
+            AND ts.startAt < :endAt
+            AND ts.endAt > :startAt
+            AND ts.id <> :excludeId
+    """)
+    boolean existsOverlappingSlotExcluding(String owner, Instant startAt, Instant endAt, UUID excludeId);
+
     List<TimeSlotJPAEntity> findByOwnerOrderByStartAtAsc(String owner);
 }

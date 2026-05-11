@@ -1,6 +1,7 @@
 package com.doodle.calendar_challenge.infrastructure.rest.error;
 
 import com.doodle.calendar_challenge.application.exception.OverlappingTimeSlotException;
+import com.doodle.calendar_challenge.application.exception.TimeSlotNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,12 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(TimeSlotNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleTimeSlotNotFoundException(TimeSlotNotFoundException ex) {
+        return new ErrorResponse(ex.getMessage());
+    }
 
     @ExceptionHandler(OverlappingTimeSlotException.class)
     @ResponseStatus(HttpStatus.CONFLICT)

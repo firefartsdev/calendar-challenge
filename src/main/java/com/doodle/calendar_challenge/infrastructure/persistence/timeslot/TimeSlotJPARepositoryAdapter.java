@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 @RequiredArgsConstructor
@@ -28,10 +30,24 @@ public class TimeSlotJPARepositoryAdapter implements TimeSlotRepository {
     }
 
     @Override
+    public Optional<TimeSlot> findById(UUID id) {
+        log.debug("Finding TimeSlot by id={}", id);
+        return this.timeSlotRepository.findById(id)
+                .map(this.timeSlotMapper::toDomain);
+    }
+
+    @Override
     public boolean existsOverlappingSlot(String owner, TimeRange timeRange) {
         log.debug("Checking overlapping slots for owner={}, startAt={}, endAt={}",
                 owner, timeRange.startAt(), timeRange.endAt());
         return this.timeSlotRepository.existsOverlappingSlot(owner, timeRange.startAt(), timeRange.endAt());
+    }
+
+    @Override
+    public boolean existsOverlappingSlotExcluding(String owner, TimeRange timeRange, UUID excludeId) {
+        log.debug("Checking overlapping slots for owner={}, startAt={}, endAt={}, excludeId={}",
+                owner, timeRange.startAt(), timeRange.endAt(), excludeId);
+        return this.timeSlotRepository.existsOverlappingSlotExcluding(owner, timeRange.startAt(), timeRange.endAt(), excludeId);
     }
 
     @Override
