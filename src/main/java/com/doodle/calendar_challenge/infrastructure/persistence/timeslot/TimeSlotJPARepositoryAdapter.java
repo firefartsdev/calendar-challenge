@@ -51,6 +51,15 @@ public class TimeSlotJPARepositoryAdapter implements TimeSlotRepository {
     }
 
     @Override
+    public Optional<TimeSlot> findFreeSlotCovering(String owner, TimeRange timeRange) {
+        log.debug("Finding free covering slot for owner={}, startAt={}, endAt={}",
+                owner, timeRange.startAt(), timeRange.endAt());
+        return this.timeSlotRepository.findFirstByOwnerAndBusyFalseAndStartAtLessThanEqualAndEndAtGreaterThanEqual(
+                        owner, timeRange.startAt(), timeRange.endAt())
+                .map(this.timeSlotMapper::toDomain);
+    }
+
+    @Override
     public List<TimeSlot> findByOwnerOrderByStartAt(String owner) {
         log.debug("Finding TimeSlots for owner={} ordered by startAt", owner);
         return this.timeSlotRepository.findByOwnerOrderByStartAtAsc(owner)

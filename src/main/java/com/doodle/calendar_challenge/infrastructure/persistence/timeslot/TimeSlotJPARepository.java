@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface TimeSlotJPARepository extends JpaRepository<TimeSlotJPAEntity, UUID> {
@@ -27,6 +28,9 @@ public interface TimeSlotJPARepository extends JpaRepository<TimeSlotJPAEntity, 
             AND ts.id <> :excludeId
     """)
     boolean existsOverlappingSlotExcluding(String owner, Instant startAt, Instant endAt, UUID excludeId);
+
+    Optional<TimeSlotJPAEntity> findFirstByOwnerAndBusyFalseAndStartAtLessThanEqualAndEndAtGreaterThanEqual(
+            String owner, Instant startAt, Instant endAt);
 
     List<TimeSlotJPAEntity> findByOwnerOrderByStartAtAsc(String owner);
 }

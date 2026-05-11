@@ -17,5 +17,7 @@ public interface TimeSlotRepository {
 
     boolean existsOverlappingSlotExcluding(String owner, TimeRange timeRange, UUID excludeId);
 
+    Optional<TimeSlot> findFreeSlotCovering(String owner, TimeRange timeRange);
+
     List<TimeSlot> findByOwnerOrderByStartAt(String owner);
 }
