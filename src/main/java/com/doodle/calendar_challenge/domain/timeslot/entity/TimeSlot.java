@@ -15,10 +15,6 @@ public record TimeSlot(UUID id, String owner, TimeRange timeRange, boolean busy,
             throw new IllegalArgumentException("Time range is required");
         }
 
-        if(busy  && meetingId == null) {
-            throw new IllegalArgumentException("Busy time slot must have a meeting id");
-        }
-
         if(!busy && meetingId != null) {
             throw new IllegalArgumentException("Free slot cannot have a meeting id");
         }

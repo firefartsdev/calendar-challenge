@@ -21,8 +21,7 @@ public class CreateTimeSlotUseCase {
     private final TimeSlotRepository timeSlotRepository;
 
     public TimeSlot createTimeSlot(CreateTimeSlotCommand command) {
-        log.info("Creating TimeSlot for owner={}, startAt={}, endAt={}",
-                command.owner(), command.startAt(), command.endAt());
+        log.info("Creating TimeSlot {}", command);
 
         final var timeRange = new TimeRange(command.startAt(), command.endAt());
         final var overlapExists = this.timeSlotRepository.existsOverlappingSlot(command.owner(), timeRange);
@@ -33,7 +32,7 @@ public class CreateTimeSlotUseCase {
             throw new OverlappingTimeSlotException("TimeSlot is overlapping with an existing timeSlot");
         }
 
-        final var timeSlot = new TimeSlot(UUID.randomUUID(), command.owner(), timeRange, false, null, null);
+        final var timeSlot = new TimeSlot(UUID.randomUUID(), command.owner(), timeRange, command.busy(), null, null);
         return this.timeSlotRepository.save(timeSlot);
     }
 }

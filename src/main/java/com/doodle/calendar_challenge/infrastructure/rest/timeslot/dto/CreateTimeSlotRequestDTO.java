@@ -5,6 +5,6 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
 
-public record CreateTimeSlotRequestDTO(@NotBlank String owner, @NotNull Instant startAt, @NotNull Instant endAt) {
+public record CreateTimeSlotRequestDTO(@NotBlank String owner, @NotNull Instant startAt, @NotNull Instant endAt, boolean busy) {
 
 }

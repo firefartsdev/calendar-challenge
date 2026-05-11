@@ -43,6 +43,14 @@ public class GlobalExceptionHandler {
         return new ErrorResponse("Database error");
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.warn("Validation error: {}", ex.getMessage());
+
+        return new ErrorResponse(ex.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorResponse handleException(Exception ex) {
