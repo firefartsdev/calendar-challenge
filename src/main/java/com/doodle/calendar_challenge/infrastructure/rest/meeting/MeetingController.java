@@ -5,6 +5,7 @@ import com.doodle.calendar_challenge.infrastructure.rest.meeting.dto.CreateMeeti
 import com.doodle.calendar_challenge.infrastructure.rest.meeting.dto.MeetingResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/meetings")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Meetings", description = "Operations for creating and managing meetings")
 public class MeetingController {
 
     private final CreateMeetingUseCase createMeetingUseCase;

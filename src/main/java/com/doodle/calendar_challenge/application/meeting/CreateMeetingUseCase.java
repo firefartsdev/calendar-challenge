@@ -8,6 +8,7 @@ import com.doodle.calendar_challenge.domain.meeting.port.MeetingRepository;
 import com.doodle.calendar_challenge.domain.meeting.vo.CreateMeetingCommand;
 import com.doodle.calendar_challenge.domain.timeslot.entity.TimeSlot;
 import com.doodle.calendar_challenge.domain.timeslot.port.TimeSlotRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class CreateMeetingUseCase {
 
     private final TimeSlotRepository timeSlotRepository;
     private final MeetingRepository meetingRepository;
+    private final MeterRegistry meterRegistry;
 
     public Meeting createMeeting(CreateMeetingCommand command) {
         log.info("Creating Meeting for timeSlotId={}", command.timeSlotId());
@@ -34,6 +36,7 @@ public class CreateMeetingUseCase {
 
         if (ownerSlot.busy()) {
             log.warn("TimeSlot id={} is not free", command.timeSlotId());
+            meterRegistry.counter("meetings.creation.failed", "reason", "slot_not_free").increment();
             throw new TimeSlotNotFreeException(command.timeSlotId());
         }
 
@@ -48,6 +51,7 @@ public class CreateMeetingUseCase {
                         p -> this.timeSlotRepository.findFreeSlotCovering(p, ownerSlot.timeRange())
                                 .orElseThrow(() -> {
                                     log.warn("Participant '{}' has no free slot covering timeRange={}", p, ownerSlot.timeRange());
+                                    meterRegistry.counter("meetings.creation.failed", "reason", "participant_not_available").increment();
                                     return new ParticipantNotAvailableException(p);
                                 })
                 ));
@@ -61,6 +65,7 @@ public class CreateMeetingUseCase {
         markSlotBusy(ownerSlot, savedMeeting.id());
         participantSlots.values().forEach(slot -> markSlotBusy(slot, savedMeeting.id()));
 
+        meterRegistry.counter("meetings.created").increment();
         log.info("Meeting id={} created and linked to {} time slot(s)", savedMeeting.id(), 1 + participantSlots.size());
         return savedMeeting;
     }

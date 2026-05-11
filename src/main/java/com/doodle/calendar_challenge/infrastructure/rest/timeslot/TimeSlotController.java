@@ -11,6 +11,7 @@ import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.TimeSlotSc
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.UpdateTimeSlotRequestDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import java.util.List;
 @RequestMapping("/api/v1/timeslots")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Time Slots", description = "Operations for managing personal time slots and viewing the schedule")
 public class TimeSlotController {
 
     private final CreateTimeSlotUseCase createTimeSlotUseCase;
