@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: calendar-challenge
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/doodle}
+    username: ${SPRING_DATASOURCE_USERNAME:doodle}
+    password: ${SPRING_DATASOURCE_PASSWORD:doodle}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+    properties:
+      hibernate:
+        format_sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

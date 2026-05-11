@@ -1,0 +1,50 @@
+version: '3.9'
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: mini-doodle-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: doodle
+      POSTGRES_USER: doodle
+      POSTGRES_PASSWORD: doodle
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U doodle" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: mini-doodle-app
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/doodle
+      SPRING_DATASOURCE_USERNAME: doodle
+      SPRING_DATASOURCE_PASSWORD: doodle
+
+      SPRING_PROFILES_ACTIVE: docker
+
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
