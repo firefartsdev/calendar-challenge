@@ -1,6 +1,7 @@
 package com.doodle.calendar_challenge.infrastructure.rest.timeslot;
 
 import com.doodle.calendar_challenge.application.timeslot.CreateTimeSlotUseCase;
+import com.doodle.calendar_challenge.application.timeslot.DeleteTimeSlotUseCase;
 import com.doodle.calendar_challenge.application.timeslot.ListTimeSlotsByOwnerUseCase;
 import com.doodle.calendar_challenge.application.timeslot.UpdateTimeSlotUseCase;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.CreateTimeSlotRequestDTO;
@@ -30,6 +31,8 @@ public class TimeSlotController {
 
     private final UpdateTimeSlotUseCase updateTimeSlotUseCase;
 
+    private final DeleteTimeSlotUseCase deleteTimeSlotUseCase;
+
     private final TimeSlotApiMapper timeSlotApiMapper;
 
     @PostMapping
@@ -53,6 +56,17 @@ public class TimeSlotController {
         log.info("Time slot list request for owner={}", owner);
         final var timeSlots = this.listTimeSlotsByOwnerUseCase.listTimeSlotsByOwner(owner);
         return timeSlots.stream().map(this.timeSlotApiMapper::toResponse).toList();
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Deletes a time slot", description = "Deletes a time slot. A time slot with an assigned meeting cannot be deleted.")
+    @ApiResponse(responseCode = "204", description = "Time slot deleted successfully.")
+    @ApiResponse(responseCode = "404", description = "Time slot not found.")
+    @ApiResponse(responseCode = "409", description = "Time slot has a meeting assigned.")
+    public void deleteTimeSlot(@PathVariable UUID id) {
+        log.info("Time slot delete request for id={}", id);
+        this.deleteTimeSlotUseCase.deleteTimeSlot(id);
     }
 
     @PatchMapping("/{id}")

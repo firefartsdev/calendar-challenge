@@ -19,5 +19,7 @@ public interface TimeSlotRepository {
 
     Optional<TimeSlot> findFreeSlotCovering(String owner, TimeRange timeRange);
 
+    void deleteById(UUID id);
+
     List<TimeSlot> findByOwnerOrderByStartAt(String owner);
 }

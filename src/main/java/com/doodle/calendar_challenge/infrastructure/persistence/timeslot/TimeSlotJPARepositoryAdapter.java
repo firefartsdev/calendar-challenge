@@ -51,6 +51,12 @@ public class TimeSlotJPARepositoryAdapter implements TimeSlotRepository {
     }
 
     @Override
+    public void deleteById(UUID id) {
+        log.info("Deleting TimeSlot by id={}", id);
+        this.timeSlotRepository.deleteById(id);
+    }
+
+    @Override
     public Optional<TimeSlot> findFreeSlotCovering(String owner, TimeRange timeRange) {
         log.debug("Finding free covering slot for owner={}, startAt={}, endAt={}",
                 owner, timeRange.startAt(), timeRange.endAt());

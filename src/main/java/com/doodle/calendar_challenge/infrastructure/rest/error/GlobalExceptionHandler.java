@@ -2,6 +2,7 @@ package com.doodle.calendar_challenge.infrastructure.rest.error;
 
 import com.doodle.calendar_challenge.application.exception.OverlappingTimeSlotException;
 import com.doodle.calendar_challenge.application.exception.ParticipantNotAvailableException;
+import com.doodle.calendar_challenge.application.exception.TimeSlotHasMeetingException;
 import com.doodle.calendar_challenge.application.exception.TimeSlotNotFreeException;
 import com.doodle.calendar_challenge.application.exception.TimeSlotNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TimeSlotNotFreeException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorResponse handleTimeSlotNotFreeException(TimeSlotNotFreeException ex) {
+        return new ErrorResponse(ex.getMessage());
+    }
+
+    @ExceptionHandler(TimeSlotHasMeetingException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleTimeSlotHasMeetingException(TimeSlotHasMeetingException ex) {
         return new ErrorResponse(ex.getMessage());
     }
 
