@@ -1,11 +1,13 @@
 package com.doodle.calendar_challenge.infrastructure.rest.timeslot;
 
+import com.doodle.calendar_challenge.application.calendar.GetCalendarByOwnerUseCase;
 import com.doodle.calendar_challenge.application.timeslot.CreateTimeSlotUseCase;
 import com.doodle.calendar_challenge.application.timeslot.DeleteTimeSlotUseCase;
 import com.doodle.calendar_challenge.application.timeslot.ListTimeSlotsByOwnerUseCase;
 import com.doodle.calendar_challenge.application.timeslot.UpdateTimeSlotUseCase;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.CreateTimeSlotRequestDTO;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.TimeSlotResponseDTO;
+import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.TimeSlotScheduleEntryDTO;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.UpdateTimeSlotRequestDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -32,6 +34,8 @@ public class TimeSlotController {
     private final UpdateTimeSlotUseCase updateTimeSlotUseCase;
 
     private final DeleteTimeSlotUseCase deleteTimeSlotUseCase;
+
+    private final GetCalendarByOwnerUseCase getCalendarByOwnerUseCase;
 
     private final TimeSlotApiMapper timeSlotApiMapper;
 
@@ -67,6 +71,18 @@ public class TimeSlotController {
     public void deleteTimeSlot(@PathVariable UUID id) {
         log.info("Time slot delete request for id={}", id);
         this.deleteTimeSlotUseCase.deleteTimeSlot(id);
+    }
+
+    @GetMapping("/schedule")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Get schedule by owner", description = "Returns all time slots for an owner as schedule entries ordered by start date. Each entry is FREE, BUSY, or MEETING (includes meeting title).")
+    @ApiResponse(responseCode = "200", description = "Schedule retrieved successfully.")
+    public List<TimeSlotScheduleEntryDTO> getSchedule(@RequestParam String owner) {
+        log.info("Schedule request for owner={}", owner);
+        return this.getCalendarByOwnerUseCase.getCalendar(owner)
+                .stream()
+                .map(this.timeSlotApiMapper::toScheduleEntry)
+                .toList();
     }
 
     @PatchMapping("/{id}")

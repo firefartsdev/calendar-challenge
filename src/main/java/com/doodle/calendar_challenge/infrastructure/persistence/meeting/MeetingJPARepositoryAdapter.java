@@ -6,7 +6,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -31,5 +33,14 @@ public class MeetingJPARepositoryAdapter implements MeetingRepository {
         log.debug("Finding Meeting by id={}", id);
         return this.meetingRepository.findById(id)
                 .map(this.meetingMapper::toDomain);
+    }
+
+    @Override
+    public List<Meeting> findAllById(Set<UUID> ids) {
+        log.debug("Finding Meetings by ids={}", ids);
+        return this.meetingRepository.findAllById(ids)
+                .stream()
+                .map(this.meetingMapper::toDomain)
+                .toList();
     }
 }

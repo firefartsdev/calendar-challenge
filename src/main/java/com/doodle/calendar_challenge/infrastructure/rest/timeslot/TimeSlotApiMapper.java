@@ -1,10 +1,12 @@
 package com.doodle.calendar_challenge.infrastructure.rest.timeslot;
 
+import com.doodle.calendar_challenge.domain.calendar.vo.CalendarEntry;
 import com.doodle.calendar_challenge.domain.timeslot.entity.TimeSlot;
 import com.doodle.calendar_challenge.domain.timeslot.vo.CreateTimeSlotCommand;
 import com.doodle.calendar_challenge.domain.timeslot.vo.UpdateTimeSlotCommand;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.CreateTimeSlotRequestDTO;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.TimeSlotResponseDTO;
+import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.TimeSlotScheduleEntryDTO;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.UpdateTimeSlotRequestDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -24,4 +26,8 @@ public interface TimeSlotApiMapper {
     @Mapping(target = "startAt", source = "timeRange.startAt")
     @Mapping(target = "endAt", source = "timeRange.endAt")
     TimeSlotResponseDTO toResponse(TimeSlot timeSlot);
+
+    @Mapping(target = "startAt", source = "timeRange.startAt")
+    @Mapping(target = "endAt", source = "timeRange.endAt")
+    TimeSlotScheduleEntryDTO toScheduleEntry(CalendarEntry entry);
 }
