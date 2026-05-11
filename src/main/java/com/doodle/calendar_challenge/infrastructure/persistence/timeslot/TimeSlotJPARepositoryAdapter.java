@@ -1,0 +1,34 @@
+package com.doodle.calendar_challenge.infrastructure.persistence.timeslot;
+
+import com.doodle.calendar_challenge.domain.timeslot.entity.TimeSlot;
+import com.doodle.calendar_challenge.domain.timeslot.port.TimeSlotRepository;
+import com.doodle.calendar_challenge.domain.timeslot.vo.TimeRange;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Repository;
+
+@Repository
+@RequiredArgsConstructor
+@Slf4j
+public class TimeSlotJPARepositoryAdapter implements TimeSlotRepository {
+
+    private final TimeSlotJPARepository timeSlotRepository;
+
+    private final TimeSlotJPAMapper timeSlotMapper;
+
+    @Override
+    public TimeSlot save(TimeSlot timeSlot) {
+        log.info("Saving TimeSlot {}", timeSlot);
+        final var entity  = this.timeSlotMapper.toEntity(timeSlot);
+        final var savedEntity = this.timeSlotRepository.save(entity);
+        log.info("Saved TimeSlot {}", savedEntity);
+        return this.timeSlotMapper.toDomain(savedEntity);
+    }
+
+    @Override
+    public boolean existsOverlappingSlot(String owner, TimeRange timeRange) {
+        log.debug("Checking overlapping slots for owner={}, startAt={}, endAt={}",
+                owner, timeRange.startAt(), timeRange.endAt());
+        return this.timeSlotRepository.existsOverlappingSlot(owner, timeRange.startAt(), timeRange.endAt());
+    }
+}

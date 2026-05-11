@@ -1,4 +1,6 @@
-package com.doodle.calendar_challenge.domain;
+package com.doodle.calendar_challenge.domain.timeslot.entity;
+
+import com.doodle.calendar_challenge.domain.timeslot.vo.TimeRange;
 
 import java.util.UUID;
 
