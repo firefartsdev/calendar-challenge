@@ -164,4 +164,23 @@ class SearchTimeSlotsUseCaseTest {
         assertThrows(IllegalArgumentException.class,
                 () -> new SearchTimeSlotsQuery(List.of(OWNER_A), RANGE, null, 0, 0));
     }
+
+    @Test
+    @DisplayName("throws IllegalArgumentException when owners exceed 50")
+    void throwsWhenOwnersTooMany() {
+        final var tooManyOwners = java.util.stream.IntStream.rangeClosed(1, 51)
+                .mapToObj(i -> "user" + i)
+                .toList();
+        assertThrows(IllegalArgumentException.class,
+                () -> new SearchTimeSlotsQuery(tooManyOwners, RANGE, null, 0, 20));
+    }
+
+    @Test
+    @DisplayName("accepts exactly 50 owners")
+    void accepts50Owners() {
+        final var fiftyOwners = java.util.stream.IntStream.rangeClosed(1, 50)
+                .mapToObj(i -> "user" + i)
+                .toList();
+        assertDoesNotThrow(() -> new SearchTimeSlotsQuery(fiftyOwners, RANGE, null, 0, 20));
+    }
 }

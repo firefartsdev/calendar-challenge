@@ -9,6 +9,9 @@ public record SearchTimeSlotsQuery(List<String> owners, TimeRange timeRange, Boo
         if (owners == null || owners.isEmpty()) {
             throw new IllegalArgumentException("owners must not be empty");
         }
+        if (owners.size() > 50) {
+            throw new IllegalArgumentException("owners must not exceed 50");
+        }
         Objects.requireNonNull(timeRange, "timeRange must not be null");
         if (page < 0) {
             throw new IllegalArgumentException("page must be >= 0");

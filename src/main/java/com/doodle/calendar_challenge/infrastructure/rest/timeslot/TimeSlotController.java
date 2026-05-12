@@ -10,6 +10,7 @@ import com.doodle.calendar_challenge.domain.timeslot.vo.TimeRange;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.CreateTimeSlotRequestDTO;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.TimeSlotResponseDTO;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.TimeSlotScheduleEntryDTO;
+import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.TimeSlotSearchRequestDTO;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.TimeSlotSearchResponseDTO;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.UpdateTimeSlotRequestDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -80,23 +80,20 @@ public class TimeSlotController {
                 .toList();
     }
 
-    @GetMapping("/search")
+    @PostMapping("/search")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Search time slots by owners and time range",
                description = "Returns paginated time slots for one or more owners that overlap with the given time range. " +
-                             "Optionally filter by busy status: true = only busy, false = only free, omit = both.")
+                             "Optionally filter by busy status: true = only busy, false = only free, omit = both. " +
+                             "Owners list is limited to 50. Page defaults to 0, size defaults to 20 (max 100).")
     @ApiResponse(responseCode = "200", description = "Time slots retrieved successfully.")
-    @ApiResponse(responseCode = "400", description = "Invalid request parameters.")
-    public TimeSlotSearchResponseDTO searchTimeSlots(
-            @RequestParam List<String> owners,
-            @RequestParam Instant startAt,
-            @RequestParam Instant endAt,
-            @RequestParam(required = false) Boolean busy,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+    @ApiResponse(responseCode = "400", description = "Invalid request body.")
+    public TimeSlotSearchResponseDTO searchTimeSlots(@Valid @RequestBody TimeSlotSearchRequestDTO request) {
         log.info("Time slot search request for owners={}, startAt={}, endAt={}, busy={}, page={}, size={}",
-                owners, startAt, endAt, busy, page, size);
-        final var query = new SearchTimeSlotsQuery(owners, new TimeRange(startAt, endAt), busy, page, size);
+                request.owners(), request.startAt(), request.endAt(), request.busy(), request.page(), request.size());
+        final int page = request.page() != null ? request.page() : 0;
+        final int size = request.size() != null ? request.size() : 20;
+        final var query = new SearchTimeSlotsQuery(request.owners(), new TimeRange(request.startAt(), request.endAt()), request.busy(), page, size);
         final var result = this.searchTimeSlotsUseCase.searchTimeSlots(query);
         final var content = result.content().stream().map(this.timeSlotApiMapper::toResponse).toList();
         return new TimeSlotSearchResponseDTO(content, result.currentPage(), result.pageSize(), result.totalElements(), result.totalPages());
