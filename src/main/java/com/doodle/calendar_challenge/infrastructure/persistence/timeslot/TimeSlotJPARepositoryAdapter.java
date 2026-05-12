@@ -10,9 +10,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -66,6 +70,22 @@ public class TimeSlotJPARepositoryAdapter implements TimeSlotRepository {
         return this.timeSlotRepository.findFirstByOwnerAndBusyFalseAndStartAtLessThanEqualAndEndAtGreaterThanEqual(
                         owner, timeRange.startAt(), timeRange.endAt())
                 .map(this.timeSlotMapper::toDomain);
+    }
+
+    @Override
+    public Map<String, TimeSlot> findFreeSlotsCoveringForOwners(Set<String> owners, TimeRange timeRange) {
+        log.debug("Finding free covering slots for owners={}, startAt={}, endAt={}",
+                owners, timeRange.startAt(), timeRange.endAt());
+        return this.timeSlotRepository.findFreeSlotsCoveringForOwners(owners, timeRange.startAt(), timeRange.endAt())
+                .stream()
+                .map(this.timeSlotMapper::toDomain)
+                .collect(Collectors.toMap(TimeSlot::owner, ts -> ts, (first, second) -> first));
+    }
+
+    @Override
+    public int markSlotsAsBusy(Collection<UUID> slotIds, UUID meetingId) {
+        log.info("Marking {} slot(s) as busy with meetingId={}", slotIds.size(), meetingId);
+        return this.timeSlotRepository.markSlotsAsBusy(slotIds, meetingId);
     }
 
     @Override

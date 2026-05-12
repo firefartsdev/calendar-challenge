@@ -4,8 +4,11 @@ import com.doodle.calendar_challenge.domain.shared.PagedResult;
 import com.doodle.calendar_challenge.domain.timeslot.entity.TimeSlot;
 import com.doodle.calendar_challenge.domain.timeslot.vo.TimeRange;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface TimeSlotRepository {
@@ -23,6 +26,10 @@ public interface TimeSlotRepository {
     void deleteById(UUID id);
 
     List<TimeSlot> findByOwnerOrderByStartAt(String owner);
+
+    Map<String, TimeSlot> findFreeSlotsCoveringForOwners(Set<String> owners, TimeRange timeRange);
+
+    int markSlotsAsBusy(Collection<UUID> slotIds, UUID meetingId);
 
     PagedResult<TimeSlot> searchByOwnersAndTimeRange(List<String> owners, TimeRange timeRange, Boolean busy, int page, int size);
 }

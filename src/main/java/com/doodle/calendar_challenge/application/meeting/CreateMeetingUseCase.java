@@ -14,9 +14,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -31,7 +32,7 @@ public class CreateMeetingUseCase {
     public Meeting createMeeting(CreateMeetingCommand command) {
         log.info("Creating Meeting for timeSlotId={}", command.timeSlotId());
 
-        final var ownerSlot = this.timeSlotRepository.findById(command.timeSlotId())
+        final var ownerSlot = timeSlotRepository.findById(command.timeSlotId())
                 .orElseThrow(() -> new TimeSlotNotFoundException(command.timeSlotId()));
 
         if (ownerSlot.busy()) {
@@ -40,38 +41,44 @@ public class CreateMeetingUseCase {
             throw new TimeSlotNotFreeException(command.timeSlotId());
         }
 
-        // Collect a free covering slot for every requested participant (owner excluded, checked separately).
-        // Fail fast if any participant has no available slot.
         final var participants = command.participants() == null ? new HashSet<String>() : new HashSet<>(command.participants());
         participants.remove(ownerSlot.owner());
 
-        final var participantSlots = participants.stream()
-                .collect(Collectors.toMap(
-                        p -> p,
-                        p -> this.timeSlotRepository.findFreeSlotCovering(p, ownerSlot.timeRange())
-                                .orElseThrow(() -> {
-                                    log.warn("Participant '{}' has no free slot covering timeRange={}", p, ownerSlot.timeRange());
-                                    meterRegistry.counter("meetings.creation.failed", "reason", "participant_not_available").increment();
-                                    return new ParticipantNotAvailableException(p);
-                                })
-                ));
+        // Batch SELECT: one query for all participants instead of one per participant
+        final Map<String, TimeSlot> participantSlots;
+        if (!participants.isEmpty()) {
+            participantSlots = timeSlotRepository.findFreeSlotsCoveringForOwners(participants, ownerSlot.timeRange());
+            final var missing = participants.stream()
+                    .filter(p -> !participantSlots.containsKey(p))
+                    .findFirst();
+            if (missing.isPresent()) {
+                log.warn("Participant '{}' has no free slot covering timeRange={}", missing.get(), ownerSlot.timeRange());
+                meterRegistry.counter("meetings.creation.failed", "reason", "participant_not_available").increment();
+                throw new ParticipantNotAvailableException(missing.get());
+            }
+        } else {
+            participantSlots = Map.of();
+        }
 
         participants.add(ownerSlot.owner());
-        final var meeting = new Meeting(UUID.randomUUID(), command.title(), command.description(),
-                participants, null);
-        final var savedMeeting = this.meetingRepository.save(meeting);
+        final var meeting = new Meeting(UUID.randomUUID(), command.title(), command.description(), participants, null);
+        final var savedMeeting = meetingRepository.save(meeting);
 
-        // Mark the owner's slot and every participant's slot as busy.
-        markSlotBusy(ownerSlot, savedMeeting.id());
-        participantSlots.values().forEach(slot -> markSlotBusy(slot, savedMeeting.id()));
+        // Batch UPDATE: one statement for all slots instead of one save per slot
+        final var allSlotIds = new ArrayList<UUID>();
+        allSlotIds.add(ownerSlot.id());
+        participantSlots.values().stream().map(TimeSlot::id).forEach(allSlotIds::add);
+
+        final int updated = timeSlotRepository.markSlotsAsBusy(allSlotIds, savedMeeting.id());
+        if (updated != allSlotIds.size()) {
+            log.warn("Expected to mark {} slot(s) as busy but updated {} — concurrent modification detected",
+                    allSlotIds.size(), updated);
+            meterRegistry.counter("meetings.creation.failed", "reason", "slot_not_free").increment();
+            throw new TimeSlotNotFreeException(ownerSlot.id());
+        }
 
         meterRegistry.counter("meetings.created").increment();
-        log.info("Meeting id={} created and linked to {} time slot(s)", savedMeeting.id(), 1 + participantSlots.size());
+        log.info("Meeting id={} created and linked to {} time slot(s)", savedMeeting.id(), allSlotIds.size());
         return savedMeeting;
-    }
-
-    private void markSlotBusy(TimeSlot slot, UUID meetingId) {
-        final var busySlot = new TimeSlot(slot.id(), slot.owner(), slot.timeRange(), true, meetingId, slot.version());
-        this.timeSlotRepository.save(busySlot);
     }
 }

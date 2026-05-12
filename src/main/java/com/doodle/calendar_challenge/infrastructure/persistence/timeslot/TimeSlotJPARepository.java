@@ -3,11 +3,14 @@ package com.doodle.calendar_challenge.infrastructure.persistence.timeslot;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface TimeSlotJPARepository extends JpaRepository<TimeSlotJPAEntity, UUID> {
@@ -35,6 +38,25 @@ public interface TimeSlotJPARepository extends JpaRepository<TimeSlotJPAEntity, 
             String owner, Instant startAt, Instant endAt);
 
     List<TimeSlotJPAEntity> findByOwnerOrderByStartAtAsc(String owner);
+
+    @Query("""
+        SELECT ts FROM TimeSlotJPAEntity ts
+        WHERE ts.owner IN :owners
+            AND ts.busy = false
+            AND ts.startAt <= :startAt
+            AND ts.endAt >= :endAt
+        ORDER BY ts.startAt ASC
+    """)
+    List<TimeSlotJPAEntity> findFreeSlotsCoveringForOwners(Set<String> owners, Instant startAt, Instant endAt);
+
+    @Modifying(clearAutomatically = true)
+    @Query("""
+        UPDATE TimeSlotJPAEntity ts
+        SET ts.busy = true, ts.meetingId = :meetingId, ts.version = ts.version + 1
+        WHERE ts.id IN :slotIds
+            AND ts.busy = false
+    """)
+    int markSlotsAsBusy(Collection<UUID> slotIds, UUID meetingId);
 
     @Query(value = """
         SELECT ts FROM TimeSlotJPAEntity ts

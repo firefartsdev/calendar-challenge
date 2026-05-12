@@ -20,6 +20,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -27,7 +29,6 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,8 +43,8 @@ class CreateMeetingUseCaseTest {
 
     private CreateMeetingUseCase useCase;
 
-    private static final UUID   SLOT_ID  = UUID.randomUUID();
-    private static final String OWNER    = "rafa";
+    private static final UUID SLOT_ID = UUID.randomUUID();
+    private static final String OWNER = "rafa";
     private static final String PARTICIPANT = "isaac";
     private static final TimeRange TIME_RANGE = new TimeRange(
             Instant.parse("2025-06-01T10:00:00Z"),
@@ -61,35 +62,32 @@ class CreateMeetingUseCaseTest {
     class SuccessfulCreation {
 
         @Test
-        @DisplayName("creates meeting and marks owner slot as busy")
+        @DisplayName("creates meeting and marks owner slot as busy via batch update")
         void createsMeetingAndMarksOwnerSlotBusy() {
-            final var command = new CreateMeetingCommand(SLOT_ID, "Team sync", null, Set.of());
             final var savedMeeting = new Meeting(UUID.randomUUID(), "Team sync", null, Set.of(OWNER), null);
+            final var command = new CreateMeetingCommand(SLOT_ID, "Team sync", null, Set.of());
 
             when(timeSlotRepository.findById(SLOT_ID)).thenReturn(Optional.of(FREE_OWNER_SLOT));
             when(meetingRepository.save(any())).thenReturn(savedMeeting);
+            when(timeSlotRepository.markSlotsAsBusy(any(), any())).thenReturn(1);
 
             useCase.createMeeting(command);
 
-            final var slotCaptor = ArgumentCaptor.forClass(TimeSlot.class);
-            verify(timeSlotRepository, atLeastOnce()).save(slotCaptor.capture());
-
-            final var savedSlot = slotCaptor.getAllValues().stream()
-                    .filter(s -> s.id().equals(SLOT_ID))
-                    .findFirst().orElseThrow();
-            assertTrue(savedSlot.busy());
-            assertEquals(savedMeeting.id(), savedSlot.meetingId());
+            verify(timeSlotRepository).markSlotsAsBusy(
+                    argThat((Collection<UUID> ids) -> ids.contains(SLOT_ID) && ids.size() == 1),
+                    eq(savedMeeting.id()));
         }
 
         @Test
         @DisplayName("owner is added to participants automatically")
         void ownerAddedToParticipantsAutomatically() {
-            final var command = new CreateMeetingCommand(SLOT_ID, "Team sync", null, Set.of(PARTICIPANT));
             final var participantSlot = new TimeSlot(UUID.randomUUID(), PARTICIPANT, TIME_RANGE, false, null, 1L);
+            final var command = new CreateMeetingCommand(SLOT_ID, "Team sync", null, Set.of(PARTICIPANT));
 
             when(timeSlotRepository.findById(SLOT_ID)).thenReturn(Optional.of(FREE_OWNER_SLOT));
-            when(timeSlotRepository.findFreeSlotCovering(eq(PARTICIPANT), eq(TIME_RANGE)))
-                    .thenReturn(Optional.of(participantSlot));
+            when(timeSlotRepository.findFreeSlotsCoveringForOwners(Set.of(PARTICIPANT), TIME_RANGE))
+                    .thenReturn(Map.of(PARTICIPANT, participantSlot));
+            when(timeSlotRepository.markSlotsAsBusy(any(), any())).thenReturn(2);
 
             final var meetingCaptor = ArgumentCaptor.forClass(Meeting.class);
             when(meetingRepository.save(meetingCaptor.capture())).thenAnswer(i -> i.getArgument(0));
@@ -101,7 +99,7 @@ class CreateMeetingUseCaseTest {
         }
 
         @Test
-        @DisplayName("marks all participant slots as busy with the meeting id")
+        @DisplayName("marks all participant slots as busy with a single batch update")
         void marksAllParticipantSlotsBusy() {
             final var participantSlotId = UUID.randomUUID();
             final var participantSlot = new TimeSlot(participantSlotId, PARTICIPANT, TIME_RANGE, false, null, 1L);
@@ -109,14 +107,17 @@ class CreateMeetingUseCaseTest {
             final var savedMeeting = new Meeting(UUID.randomUUID(), "Team sync", null, Set.of(OWNER, PARTICIPANT), null);
 
             when(timeSlotRepository.findById(SLOT_ID)).thenReturn(Optional.of(FREE_OWNER_SLOT));
-            when(timeSlotRepository.findFreeSlotCovering(eq(PARTICIPANT), eq(TIME_RANGE)))
-                    .thenReturn(Optional.of(participantSlot));
+            when(timeSlotRepository.findFreeSlotsCoveringForOwners(Set.of(PARTICIPANT), TIME_RANGE))
+                    .thenReturn(Map.of(PARTICIPANT, participantSlot));
             when(meetingRepository.save(any())).thenReturn(savedMeeting);
+            when(timeSlotRepository.markSlotsAsBusy(any(), any())).thenReturn(2);
 
             useCase.createMeeting(command);
 
-            verify(timeSlotRepository, atLeastOnce()).save(argThat(s ->
-                    s.id().equals(participantSlotId) && s.busy() && savedMeeting.id().equals(s.meetingId())));
+            verify(timeSlotRepository).markSlotsAsBusy(
+                    argThat((Collection<UUID> ids) -> ids.contains(SLOT_ID) && ids.contains(participantSlotId) && ids.size() == 2),
+                    eq(savedMeeting.id()));
+            verify(timeSlotRepository, never()).save(any());
         }
     }
 
@@ -149,12 +150,29 @@ class CreateMeetingUseCaseTest {
         @DisplayName("throws ParticipantNotAvailableException when participant has no free slot")
         void throwsWhenParticipantHasNoFreeSlot() {
             when(timeSlotRepository.findById(SLOT_ID)).thenReturn(Optional.of(FREE_OWNER_SLOT));
-            when(timeSlotRepository.findFreeSlotCovering(eq(PARTICIPANT), eq(TIME_RANGE)))
-                    .thenReturn(Optional.empty());
+            when(timeSlotRepository.findFreeSlotsCoveringForOwners(Set.of(PARTICIPANT), TIME_RANGE))
+                    .thenReturn(Map.of());
             final var command = new CreateMeetingCommand(SLOT_ID, "Team sync", null, Set.of(PARTICIPANT));
 
             assertThrows(ParticipantNotAvailableException.class, () -> useCase.createMeeting(command));
             verify(meetingRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("throws TimeSlotNotFreeException when concurrent modification prevents batch update")
+        void throwsWhenConcurrentModificationDetected() {
+            final var participantSlot = new TimeSlot(UUID.randomUUID(), PARTICIPANT, TIME_RANGE, false, null, 1L);
+            final var command = new CreateMeetingCommand(SLOT_ID, "Team sync", null, Set.of(PARTICIPANT));
+            final var savedMeeting = new Meeting(UUID.randomUUID(), "Team sync", null, Set.of(OWNER, PARTICIPANT), null);
+
+            when(timeSlotRepository.findById(SLOT_ID)).thenReturn(Optional.of(FREE_OWNER_SLOT));
+            when(timeSlotRepository.findFreeSlotsCoveringForOwners(Set.of(PARTICIPANT), TIME_RANGE))
+                    .thenReturn(Map.of(PARTICIPANT, participantSlot));
+            when(meetingRepository.save(any())).thenReturn(savedMeeting);
+            // Only 1 updated instead of expected 2 — simulates concurrent modification
+            when(timeSlotRepository.markSlotsAsBusy(any(), any())).thenReturn(1);
+
+            assertThrows(TimeSlotNotFreeException.class, () -> useCase.createMeeting(command));
         }
     }
 }
