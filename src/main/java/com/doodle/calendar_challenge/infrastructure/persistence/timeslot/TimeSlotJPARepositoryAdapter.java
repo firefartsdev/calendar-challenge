@@ -32,11 +32,11 @@ public class TimeSlotJPARepositoryAdapter implements TimeSlotRepository {
 
     @Override
     public TimeSlot save(TimeSlot timeSlot) {
-        log.info("Saving TimeSlot {}", timeSlot);
+        log.debug("Saving TimeSlot {}", timeSlot);
         final var entity = this.timeSlotMapper.toEntity(timeSlot);
         try {
             final var savedEntity = this.timeSlotRepository.save(entity);
-            log.info("Saved TimeSlot {}", savedEntity);
+            log.debug("Saved TimeSlot {}", savedEntity);
             return this.timeSlotMapper.toDomain(savedEntity);
         } catch (DataIntegrityViolationException ex) {
             if (isExclusionConstraintViolation(ex)) {
@@ -80,7 +80,7 @@ public class TimeSlotJPARepositoryAdapter implements TimeSlotRepository {
 
     @Override
     public void deleteById(UUID id) {
-        log.info("Deleting TimeSlot by id={}", id);
+        log.debug("Deleting TimeSlot by id={}", id);
         this.timeSlotRepository.deleteById(id);
     }
 
@@ -105,7 +105,7 @@ public class TimeSlotJPARepositoryAdapter implements TimeSlotRepository {
 
     @Override
     public int markSlotsAsBusy(Collection<UUID> slotIds, UUID meetingId) {
-        log.info("Marking {} slot(s) as busy with meetingId={}", slotIds.size(), meetingId);
+        log.debug("Marking {} slot(s) as busy with meetingId={}", slotIds.size(), meetingId);
         return this.timeSlotRepository.markSlotsAsBusy(slotIds, meetingId);
     }
 

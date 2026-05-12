@@ -21,10 +21,10 @@ public class MeetingJPARepositoryAdapter implements MeetingRepository {
 
     @Override
     public Meeting save(Meeting meeting) {
-        log.info("Saving Meeting {}", meeting);
+        log.debug("Saving Meeting {}", meeting);
         final var entity = this.meetingMapper.toEntity(meeting);
         final var savedEntity = this.meetingRepository.save(entity);
-        log.info("Saved Meeting {}", savedEntity);
+        log.debug("Saved Meeting {}", savedEntity);
         return this.meetingMapper.toDomain(savedEntity);
     }
 
