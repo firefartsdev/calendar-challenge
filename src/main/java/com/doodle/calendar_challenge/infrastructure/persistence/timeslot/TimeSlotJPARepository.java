@@ -34,7 +34,7 @@ public interface TimeSlotJPARepository extends JpaRepository<TimeSlotJPAEntity, 
     """)
     boolean existsOverlappingSlotExcluding(String owner, Instant startAt, Instant endAt, UUID excludeId);
 
-    Optional<TimeSlotJPAEntity> findFirstByOwnerAndBusyFalseAndStartAtLessThanEqualAndEndAtGreaterThanEqual(
+    Optional<TimeSlotJPAEntity> findFirstByOwnerAndBusyFalseAndStartAtLessThanEqualAndEndAtGreaterThanEqualOrderByStartAtAsc(
             String owner, Instant startAt, Instant endAt);
 
     List<TimeSlotJPAEntity> findByOwnerOrderByStartAtAsc(String owner);
