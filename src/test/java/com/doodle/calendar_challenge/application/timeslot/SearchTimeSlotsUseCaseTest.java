@@ -1,5 +1,6 @@
 package com.doodle.calendar_challenge.application.timeslot;
 
+import com.doodle.calendar_challenge.domain.shared.PagedResult;
 import com.doodle.calendar_challenge.domain.timeslot.entity.TimeSlot;
 import com.doodle.calendar_challenge.domain.timeslot.port.TimeSlotRepository;
 import com.doodle.calendar_challenge.domain.timeslot.vo.SearchTimeSlotsQuery;
@@ -47,74 +48,120 @@ class SearchTimeSlotsUseCaseTest {
                 true, UUID.randomUUID(), null);
     }
 
+    private PagedResult<TimeSlot> pageOf(TimeSlot... slots) {
+        return new PagedResult<>(List.of(slots), slots.length, 1, 0, 20);
+    }
+
     @Test
     @DisplayName("returns all slots for multiple owners when busy filter is null")
     void returnsAllSlotsForMultipleOwners() {
         final var slotA = freeSlot(OWNER_A);
         final var slotB = busySlot(OWNER_B);
-        final var query = new SearchTimeSlotsQuery(List.of(OWNER_A, OWNER_B), RANGE, null);
+        final var query = new SearchTimeSlotsQuery(List.of(OWNER_A, OWNER_B), RANGE, null, 0, 20);
 
-        when(timeSlotRepository.searchByOwnersAndTimeRange(List.of(OWNER_A, OWNER_B), RANGE, null))
-                .thenReturn(List.of(slotA, slotB));
+        when(timeSlotRepository.searchByOwnersAndTimeRange(List.of(OWNER_A, OWNER_B), RANGE, null, 0, 20))
+                .thenReturn(pageOf(slotA, slotB));
 
         final var result = useCase.searchTimeSlots(query);
 
-        assertEquals(2, result.size());
-        verify(timeSlotRepository).searchByOwnersAndTimeRange(List.of(OWNER_A, OWNER_B), RANGE, null);
+        assertEquals(2, result.content().size());
+        assertEquals(2, result.totalElements());
+        verify(timeSlotRepository).searchByOwnersAndTimeRange(List.of(OWNER_A, OWNER_B), RANGE, null, 0, 20);
     }
 
     @Test
     @DisplayName("passes busy=true filter to repository when searching only busy slots")
     void filtersBusySlots() {
         final var slotA = busySlot(OWNER_A);
-        final var query = new SearchTimeSlotsQuery(List.of(OWNER_A, OWNER_B), RANGE, true);
+        final var query = new SearchTimeSlotsQuery(List.of(OWNER_A, OWNER_B), RANGE, true, 0, 20);
 
-        when(timeSlotRepository.searchByOwnersAndTimeRange(List.of(OWNER_A, OWNER_B), RANGE, true))
-                .thenReturn(List.of(slotA));
+        when(timeSlotRepository.searchByOwnersAndTimeRange(List.of(OWNER_A, OWNER_B), RANGE, true, 0, 20))
+                .thenReturn(pageOf(slotA));
 
         final var result = useCase.searchTimeSlots(query);
 
-        assertEquals(1, result.size());
-        assertTrue(result.get(0).busy());
+        assertEquals(1, result.content().size());
+        assertTrue(result.content().get(0).busy());
     }
 
     @Test
     @DisplayName("passes busy=false filter to repository when searching only free slots")
     void filtersFreeSlots() {
         final var slotA = freeSlot(OWNER_A);
-        final var query = new SearchTimeSlotsQuery(List.of(OWNER_A, OWNER_B), RANGE, false);
+        final var query = new SearchTimeSlotsQuery(List.of(OWNER_A, OWNER_B), RANGE, false, 0, 20);
 
-        when(timeSlotRepository.searchByOwnersAndTimeRange(List.of(OWNER_A, OWNER_B), RANGE, false))
-                .thenReturn(List.of(slotA));
+        when(timeSlotRepository.searchByOwnersAndTimeRange(List.of(OWNER_A, OWNER_B), RANGE, false, 0, 20))
+                .thenReturn(pageOf(slotA));
 
         final var result = useCase.searchTimeSlots(query);
 
-        assertEquals(1, result.size());
-        assertFalse(result.get(0).busy());
+        assertEquals(1, result.content().size());
+        assertFalse(result.content().get(0).busy());
     }
 
     @Test
-    @DisplayName("returns empty list when no slots match")
+    @DisplayName("returns empty page when no slots match")
     void returnsEmptyWhenNoMatch() {
-        final var query = new SearchTimeSlotsQuery(List.of(OWNER_A), RANGE, null);
+        final var query = new SearchTimeSlotsQuery(List.of(OWNER_A), RANGE, null, 0, 20);
 
-        when(timeSlotRepository.searchByOwnersAndTimeRange(List.of(OWNER_A), RANGE, null))
-                .thenReturn(List.of());
+        when(timeSlotRepository.searchByOwnersAndTimeRange(List.of(OWNER_A), RANGE, null, 0, 20))
+                .thenReturn(new PagedResult<>(List.of(), 0, 0, 0, 20));
 
-        assertTrue(useCase.searchTimeSlots(query).isEmpty());
+        final var result = useCase.searchTimeSlots(query);
+
+        assertTrue(result.content().isEmpty());
+        assertEquals(0, result.totalElements());
+    }
+
+    @Test
+    @DisplayName("propagates pagination parameters to repository")
+    void propagatesPaginationParams() {
+        final var slotA = freeSlot(OWNER_A);
+        final var query = new SearchTimeSlotsQuery(List.of(OWNER_A), RANGE, null, 2, 10);
+
+        when(timeSlotRepository.searchByOwnersAndTimeRange(List.of(OWNER_A), RANGE, null, 2, 10))
+                .thenReturn(new PagedResult<>(List.of(slotA), 25, 3, 2, 10));
+
+        final var result = useCase.searchTimeSlots(query);
+
+        assertEquals(2, result.currentPage());
+        assertEquals(10, result.pageSize());
+        assertEquals(25, result.totalElements());
+        assertEquals(3, result.totalPages());
     }
 
     @Test
     @DisplayName("throws IllegalArgumentException when owners list is empty")
     void throwsWhenOwnersEmpty() {
         assertThrows(IllegalArgumentException.class,
-                () -> new SearchTimeSlotsQuery(List.of(), RANGE, null));
+                () -> new SearchTimeSlotsQuery(List.of(), RANGE, null, 0, 20));
     }
 
     @Test
     @DisplayName("throws IllegalArgumentException when owners list is null")
     void throwsWhenOwnersNull() {
         assertThrows(IllegalArgumentException.class,
-                () -> new SearchTimeSlotsQuery(null, RANGE, null));
+                () -> new SearchTimeSlotsQuery(null, RANGE, null, 0, 20));
+    }
+
+    @Test
+    @DisplayName("throws IllegalArgumentException when page is negative")
+    void throwsWhenPageNegative() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new SearchTimeSlotsQuery(List.of(OWNER_A), RANGE, null, -1, 20));
+    }
+
+    @Test
+    @DisplayName("throws IllegalArgumentException when size exceeds maximum")
+    void throwsWhenSizeExceedsMax() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new SearchTimeSlotsQuery(List.of(OWNER_A), RANGE, null, 0, 101));
+    }
+
+    @Test
+    @DisplayName("throws IllegalArgumentException when size is zero")
+    void throwsWhenSizeIsZero() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new SearchTimeSlotsQuery(List.of(OWNER_A), RANGE, null, 0, 0));
     }
 }

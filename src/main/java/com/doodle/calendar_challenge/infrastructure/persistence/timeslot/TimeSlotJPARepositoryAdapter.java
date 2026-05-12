@@ -1,10 +1,13 @@
 package com.doodle.calendar_challenge.infrastructure.persistence.timeslot;
 
+import com.doodle.calendar_challenge.domain.shared.PagedResult;
 import com.doodle.calendar_challenge.domain.timeslot.entity.TimeSlot;
 import com.doodle.calendar_challenge.domain.timeslot.port.TimeSlotRepository;
 import com.doodle.calendar_challenge.domain.timeslot.vo.TimeRange;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -75,14 +78,17 @@ public class TimeSlotJPARepositoryAdapter implements TimeSlotRepository {
     }
 
     @Override
-    public List<TimeSlot> searchByOwnersAndTimeRange(List<String> owners, TimeRange timeRange, Boolean busy) {
-        log.debug("Searching TimeSlots for owners={}, startAt={}, endAt={}, busy={}",
-                owners, timeRange.startAt(), timeRange.endAt(), busy);
-        final var entities = busy == null
-                ? this.timeSlotRepository.findByOwnersAndTimeRange(owners, timeRange.startAt(), timeRange.endAt())
-                : this.timeSlotRepository.findByOwnersAndTimeRangeAndBusy(owners, timeRange.startAt(), timeRange.endAt(), busy);
-        return entities.stream()
+    public PagedResult<TimeSlot> searchByOwnersAndTimeRange(List<String> owners, TimeRange timeRange, Boolean busy, int page, int size) {
+        log.debug("Searching TimeSlots for owners={}, startAt={}, endAt={}, busy={}, page={}, size={}",
+                owners, timeRange.startAt(), timeRange.endAt(), busy, page, size);
+        final var pageable = PageRequest.of(page, size,
+                Sort.by(Sort.Order.asc("owner"), Sort.Order.asc("startAt")));
+        final var result = busy == null
+                ? this.timeSlotRepository.findByOwnersAndTimeRange(owners, timeRange.startAt(), timeRange.endAt(), pageable)
+                : this.timeSlotRepository.findByOwnersAndTimeRangeAndBusy(owners, timeRange.startAt(), timeRange.endAt(), busy, pageable);
+        final var content = result.getContent().stream()
                 .map(this.timeSlotMapper::toDomain)
                 .toList();
+        return new PagedResult<>(content, result.getTotalElements(), result.getTotalPages(), page, size);
     }
 }

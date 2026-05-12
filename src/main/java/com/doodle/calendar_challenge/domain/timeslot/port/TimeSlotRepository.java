@@ -1,5 +1,6 @@
 package com.doodle.calendar_challenge.domain.timeslot.port;
 
+import com.doodle.calendar_challenge.domain.shared.PagedResult;
 import com.doodle.calendar_challenge.domain.timeslot.entity.TimeSlot;
 import com.doodle.calendar_challenge.domain.timeslot.vo.TimeRange;
 
@@ -23,5 +24,5 @@ public interface TimeSlotRepository {
 
     List<TimeSlot> findByOwnerOrderByStartAt(String owner);
 
-    List<TimeSlot> searchByOwnersAndTimeRange(List<String> owners, TimeRange timeRange, Boolean busy);
+    PagedResult<TimeSlot> searchByOwnersAndTimeRange(List<String> owners, TimeRange timeRange, Boolean busy, int page, int size);
 }

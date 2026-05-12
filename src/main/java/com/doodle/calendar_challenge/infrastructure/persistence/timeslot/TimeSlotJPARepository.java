@@ -1,5 +1,7 @@
 package com.doodle.calendar_challenge.infrastructure.persistence.timeslot;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -34,22 +36,33 @@ public interface TimeSlotJPARepository extends JpaRepository<TimeSlotJPAEntity, 
 
     List<TimeSlotJPAEntity> findByOwnerOrderByStartAtAsc(String owner);
 
-    @Query("""
+    @Query(value = """
         SELECT ts FROM TimeSlotJPAEntity ts
         WHERE ts.owner IN :owners
             AND ts.startAt < :endAt
             AND ts.endAt > :startAt
-        ORDER BY ts.owner ASC, ts.startAt ASC
-    """)
-    List<TimeSlotJPAEntity> findByOwnersAndTimeRange(List<String> owners, Instant startAt, Instant endAt);
+        """,
+        countQuery = """
+        SELECT COUNT(ts) FROM TimeSlotJPAEntity ts
+        WHERE ts.owner IN :owners
+            AND ts.startAt < :endAt
+            AND ts.endAt > :startAt
+        """)
+    Page<TimeSlotJPAEntity> findByOwnersAndTimeRange(List<String> owners, Instant startAt, Instant endAt, Pageable pageable);
 
-    @Query("""
+    @Query(value = """
         SELECT ts FROM TimeSlotJPAEntity ts
         WHERE ts.owner IN :owners
             AND ts.startAt < :endAt
             AND ts.endAt > :startAt
             AND ts.busy = :busy
-        ORDER BY ts.owner ASC, ts.startAt ASC
-    """)
-    List<TimeSlotJPAEntity> findByOwnersAndTimeRangeAndBusy(List<String> owners, Instant startAt, Instant endAt, boolean busy);
+        """,
+        countQuery = """
+        SELECT COUNT(ts) FROM TimeSlotJPAEntity ts
+        WHERE ts.owner IN :owners
+            AND ts.startAt < :endAt
+            AND ts.endAt > :startAt
+            AND ts.busy = :busy
+        """)
+    Page<TimeSlotJPAEntity> findByOwnersAndTimeRangeAndBusy(List<String> owners, Instant startAt, Instant endAt, boolean busy, Pageable pageable);
 }
