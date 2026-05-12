@@ -1,15 +1,18 @@
 package com.doodle.calendar_challenge.infrastructure.persistence.timeslot;
 
+import com.doodle.calendar_challenge.application.exception.OverlappingTimeSlotException;
 import com.doodle.calendar_challenge.domain.shared.PagedResult;
 import com.doodle.calendar_challenge.domain.timeslot.entity.TimeSlot;
 import com.doodle.calendar_challenge.domain.timeslot.port.TimeSlotRepository;
 import com.doodle.calendar_challenge.domain.timeslot.vo.TimeRange;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -30,10 +33,28 @@ public class TimeSlotJPARepositoryAdapter implements TimeSlotRepository {
     @Override
     public TimeSlot save(TimeSlot timeSlot) {
         log.info("Saving TimeSlot {}", timeSlot);
-        final var entity  = this.timeSlotMapper.toEntity(timeSlot);
-        final var savedEntity = this.timeSlotRepository.save(entity);
-        log.info("Saved TimeSlot {}", savedEntity);
-        return this.timeSlotMapper.toDomain(savedEntity);
+        final var entity = this.timeSlotMapper.toEntity(timeSlot);
+        try {
+            final var savedEntity = this.timeSlotRepository.save(entity);
+            log.info("Saved TimeSlot {}", savedEntity);
+            return this.timeSlotMapper.toDomain(savedEntity);
+        } catch (DataIntegrityViolationException ex) {
+            if (isExclusionConstraintViolation(ex)) {
+                throw new OverlappingTimeSlotException("TimeSlot overlaps with an existing slot for this owner");
+            }
+            throw ex;
+        }
+    }
+
+    private static boolean isExclusionConstraintViolation(DataIntegrityViolationException ex) {
+        Throwable cause = ex.getCause();
+        while (cause != null) {
+            if (cause instanceof SQLException sqlEx && "23P01".equals(sqlEx.getSQLState())) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     @Override
