@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import com.fasterxml.uuid.Generators;
 
 @Service
 @Transactional
@@ -35,7 +35,7 @@ public class CreateTimeSlotUseCase {
             throw new OverlappingTimeSlotException("TimeSlot is overlapping with an existing timeSlot");
         }
 
-        final var timeSlot = new TimeSlot(UUID.randomUUID(), command.owner(), timeRange, command.busy(), null, null);
+        final var timeSlot = new TimeSlot(Generators.timeBasedEpochGenerator().generate(), command.owner(), timeRange, command.busy(), null, null);
         final var saved = this.timeSlotRepository.save(timeSlot);
         meterRegistry.counter("timeslots.created").increment();
         return saved;

@@ -14,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.uuid.Generators;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
@@ -61,7 +63,7 @@ public class CreateMeetingUseCase {
         }
 
         participants.add(ownerSlot.owner());
-        final var meeting = new Meeting(UUID.randomUUID(), command.title(), command.description(), participants, null);
+        final var meeting = new Meeting(Generators.timeBasedEpochGenerator().generate(), command.title(), command.description(), participants, null);
         final var savedMeeting = meetingRepository.save(meeting);
 
         // Batch UPDATE: one statement for all slots instead of one save per slot
