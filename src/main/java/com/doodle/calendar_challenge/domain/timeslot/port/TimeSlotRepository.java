@@ -22,4 +22,6 @@ public interface TimeSlotRepository {
     void deleteById(UUID id);
 
     List<TimeSlot> findByOwnerOrderByStartAt(String owner);
+
+    List<TimeSlot> searchByOwnersAndTimeRange(List<String> owners, TimeRange timeRange, Boolean busy);
 }

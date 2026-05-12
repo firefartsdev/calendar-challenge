@@ -33,4 +33,23 @@ public interface TimeSlotJPARepository extends JpaRepository<TimeSlotJPAEntity, 
             String owner, Instant startAt, Instant endAt);
 
     List<TimeSlotJPAEntity> findByOwnerOrderByStartAtAsc(String owner);
+
+    @Query("""
+        SELECT ts FROM TimeSlotJPAEntity ts
+        WHERE ts.owner IN :owners
+            AND ts.startAt < :endAt
+            AND ts.endAt > :startAt
+        ORDER BY ts.owner ASC, ts.startAt ASC
+    """)
+    List<TimeSlotJPAEntity> findByOwnersAndTimeRange(List<String> owners, Instant startAt, Instant endAt);
+
+    @Query("""
+        SELECT ts FROM TimeSlotJPAEntity ts
+        WHERE ts.owner IN :owners
+            AND ts.startAt < :endAt
+            AND ts.endAt > :startAt
+            AND ts.busy = :busy
+        ORDER BY ts.owner ASC, ts.startAt ASC
+    """)
+    List<TimeSlotJPAEntity> findByOwnersAndTimeRangeAndBusy(List<String> owners, Instant startAt, Instant endAt, boolean busy);
 }

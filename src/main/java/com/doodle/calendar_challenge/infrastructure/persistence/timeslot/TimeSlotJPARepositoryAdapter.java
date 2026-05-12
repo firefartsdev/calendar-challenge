@@ -73,4 +73,16 @@ public class TimeSlotJPARepositoryAdapter implements TimeSlotRepository {
                 .map(this.timeSlotMapper::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<TimeSlot> searchByOwnersAndTimeRange(List<String> owners, TimeRange timeRange, Boolean busy) {
+        log.debug("Searching TimeSlots for owners={}, startAt={}, endAt={}, busy={}",
+                owners, timeRange.startAt(), timeRange.endAt(), busy);
+        final var entities = busy == null
+                ? this.timeSlotRepository.findByOwnersAndTimeRange(owners, timeRange.startAt(), timeRange.endAt())
+                : this.timeSlotRepository.findByOwnersAndTimeRangeAndBusy(owners, timeRange.startAt(), timeRange.endAt(), busy);
+        return entities.stream()
+                .map(this.timeSlotMapper::toDomain)
+                .toList();
+    }
 }

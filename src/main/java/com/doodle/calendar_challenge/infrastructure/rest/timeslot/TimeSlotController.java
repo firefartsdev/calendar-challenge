@@ -4,7 +4,10 @@ import com.doodle.calendar_challenge.application.calendar.GetCalendarByOwnerUseC
 import com.doodle.calendar_challenge.application.timeslot.CreateTimeSlotUseCase;
 import com.doodle.calendar_challenge.application.timeslot.DeleteTimeSlotUseCase;
 import com.doodle.calendar_challenge.application.timeslot.ListTimeSlotsByOwnerUseCase;
+import com.doodle.calendar_challenge.application.timeslot.SearchTimeSlotsUseCase;
 import com.doodle.calendar_challenge.application.timeslot.UpdateTimeSlotUseCase;
+import com.doodle.calendar_challenge.domain.timeslot.vo.SearchTimeSlotsQuery;
+import com.doodle.calendar_challenge.domain.timeslot.vo.TimeRange;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.CreateTimeSlotRequestDTO;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.TimeSlotResponseDTO;
 import com.doodle.calendar_challenge.infrastructure.rest.timeslot.dto.TimeSlotScheduleEntryDTO;
@@ -18,9 +21,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/timeslots")
@@ -38,6 +41,8 @@ public class TimeSlotController {
     private final DeleteTimeSlotUseCase deleteTimeSlotUseCase;
 
     private final GetCalendarByOwnerUseCase getCalendarByOwnerUseCase;
+
+    private final SearchTimeSlotsUseCase searchTimeSlotsUseCase;
 
     private final TimeSlotApiMapper timeSlotApiMapper;
 
@@ -84,6 +89,26 @@ public class TimeSlotController {
         return this.getCalendarByOwnerUseCase.getCalendar(owner)
                 .stream()
                 .map(this.timeSlotApiMapper::toScheduleEntry)
+                .toList();
+    }
+
+    @GetMapping("/search")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Search time slots by owners and time range",
+               description = "Returns time slots for one or more owners that overlap with the given time range. " +
+                             "Optionally filter by busy status: true = only busy, false = only free, omit = both.")
+    @ApiResponse(responseCode = "200", description = "Time slots retrieved successfully.")
+    @ApiResponse(responseCode = "400", description = "Invalid request parameters.")
+    public List<TimeSlotResponseDTO> searchTimeSlots(
+            @RequestParam List<String> owners,
+            @RequestParam Instant startAt,
+            @RequestParam Instant endAt,
+            @RequestParam(required = false) Boolean busy) {
+        log.info("Time slot search request for owners={}, startAt={}, endAt={}, busy={}", owners, startAt, endAt, busy);
+        final var query = new SearchTimeSlotsQuery(owners, new TimeRange(startAt, endAt), busy);
+        return this.searchTimeSlotsUseCase.searchTimeSlots(query)
+                .stream()
+                .map(this.timeSlotApiMapper::toResponse)
                 .toList();
     }
 
