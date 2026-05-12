@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -50,6 +51,7 @@ public interface TimeSlotJPARepository extends JpaRepository<TimeSlotJPAEntity, 
     List<TimeSlotJPAEntity> findFreeSlotsCoveringForOwners(Set<String> owners, Instant startAt, Instant endAt);
 
     @Modifying(clearAutomatically = true)
+    @Transactional
     @Query("""
         UPDATE TimeSlotJPAEntity ts
         SET ts.busy = true, ts.meetingId = :meetingId, ts.version = ts.version + 1
