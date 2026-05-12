@@ -7,6 +7,7 @@ import com.doodle.calendar_challenge.application.exception.TimeSlotNotFreeExcept
 import com.doodle.calendar_challenge.application.exception.TimeSlotNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -61,6 +62,13 @@ public class GlobalExceptionHandler {
                 ));
 
         return new ValidationErrorResponse(errors);
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleOptimisticLockingFailureException(OptimisticLockingFailureException ex) {
+        log.warn("Optimistic locking conflict detected: {}", ex.getMessage());
+        return new ErrorResponse("The resource was modified by another request, please retry.");
     }
 
     @ExceptionHandler(DataAccessException.class)
